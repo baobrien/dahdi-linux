@@ -1,6 +1,7 @@
 #include "xframe_queue.h"
 #include "xbus-core.h"
 #include "dahdi_debug.h"
+#include <asm/div64.h>
 
 extern int debug;
 
@@ -41,9 +42,11 @@ static void __xframe_dump_queue(struct xframe_queue *q)
 	list_for_each_entry_reverse(xframe, &q->head, frame_list) {
 		xpacket_t *pack = (xpacket_t *)&xframe->packets[0];
 		s64 usec = ktime_us_delta(now, xframe->kt_queued);
+		u64 usecd = (u64) usec;
+		u64 usecm = do_div(usecd, 1000);
 
 		snprintf(prefix, ARRAY_SIZE(prefix), "  %3d> %5lld.%03lld msec",
-			 i++, usec / 1000, usec % 1000);
+			 i++, usecd, usecm);
 		dump_packet(prefix, pack, 1);
 	}
 }
@@ -60,11 +63,14 @@ static bool __xframe_enqueue(struct xframe_queue *q, xframe_t *xframe)
 	if (q->count >= q->max_count) {
 		q->overflows++;
 		if ((overflow_cnt++ % 1000) < 5) {
+			u64 worst_lag_us, worst_lag_ms;
+			worst_lag_ms = q->worst_lag_usec;
+			worst_lag_us = do_div(worst_lag_ms, 1000);
 			NOTICE("Overflow of %-15s: counts %3d, %3d, %3d worst %3d, overflows %3d worst_lag %02lld.%lld ms\n",
 			     q->name, q->steady_state_count, q->count,
 			     q->max_count, q->worst_count, q->overflows,
-			     q->worst_lag_usec / 1000,
-			     q->worst_lag_usec % 1000);
+			     worst_lag_ms,
+			     worst_lag_us);
 			__xframe_dump_queue(q);
 		}
 		ret = 0;

@@ -34,6 +34,7 @@
 #include <linux/slab.h>
 #include <linux/semaphore.h>
 #include <linux/moduleparam.h>
+#include <asm/div64.h>
 #endif /* __KERNEL__ */
 
 #include <dahdi/kernel.h>
@@ -83,6 +84,21 @@ typedef enum xpd_direction {
 } xpd_direction_t;
 
 #ifdef	__KERNEL__
+
+
+static inline s64 div_su64(const s64 n,const u64 q) {
+	u64 m;
+	if (n < 0) {
+		m = (u64)(-n);
+		do_div(m, q);
+		return -((s64)n);
+	} else {
+		m = (u64)(n);
+		do_div(m, q);
+		return ((s64)n);
+	}
+}
+
 
 /*
  * XPD statistics counters

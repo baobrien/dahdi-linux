@@ -119,7 +119,7 @@ static void xpp_ticker_init(struct xpp_ticker *ticker)
 static int xpp_ticker_step(struct xpp_ticker *ticker, const ktime_t t)
 {
 	unsigned long flags;
-	s64 usec;
+	ktime_t usec;
 	bool cycled = 0;
 
 	spin_lock_irqsave(&ticker->lock, flags);
@@ -129,7 +129,7 @@ static int xpp_ticker_step(struct xpp_ticker *ticker, const ktime_t t)
 		usec = ktime_us_delta(ticker->last_sample,
 					ticker->first_sample);
 		ticker->first_sample = ticker->last_sample;
-		ticker->tick_period = usec / ticker->cycle;
+		ticker->tick_period = ktime_divns(usec, (s64) ticker->cycle);
 		cycled = 1;
 	}
 	ticker->count++;
@@ -497,7 +497,7 @@ static void send_drift(xbus_t *xbus, int drift)
 	XBUS_DBG(SYNC, xbus,
 		 "%sDRIFT adjust %s (%d) (last update %lld seconds ago)\n",
 		 (disable_pll_sync) ? "Fake " : "", msg, drift,
-		 msec_delta / MSEC_PER_SEC);
+		 div_su64(msec_delta, MSEC_PER_SEC));
 	if (!disable_pll_sync)
 		CALL_PROTO(GLOBAL, SYNC_SOURCE, xbus, NULL, SYNC_MODE_PLL,
 			   drift);
@@ -1245,7 +1245,7 @@ void xframe_receive_pcm(xbus_t *xbus, xframe_t *xframe)
 {
 	if (!xframe_enqueue(&xbus->pcm_tospan, xframe)) {
 		static int rate_limit;
-
+		
 		if ((rate_limit++ % 1003) == 0)
 			XBUS_DBG(SYNC, xbus,
 				 "Failed to enqueue received pcm frame. (%d)\n",

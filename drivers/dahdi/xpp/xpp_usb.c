@@ -32,6 +32,7 @@
 #include <asm/timex.h>
 #include <linux/proc_fs.h>
 #include <linux/usb.h>
+#include <asm/div64.h>
 #include "xpd.h"
 #include "xproto.h"
 #include "xbus-core.h"
@@ -865,6 +866,7 @@ static void xpp_send_callback(struct urb *urb)
 	xbus_t *xbus = xbus_num(xusb->xbus_num);
 	ktime_t now;
 	s64 usec;
+	u64 usecd;
 	int writes = atomic_read(&xusb->pending_writes);
 	int i;
 
@@ -882,7 +884,10 @@ static void xpp_send_callback(struct urb *urb)
 		usec = 0; /* System clock jumped */
 	if (usec > xusb->max_tx_delay)
 		xusb->max_tx_delay = usec;
-	i = usec / USEC_BUCKET;
+	//i = usec / USEC_BUCKET
+	usecd = (u64) usec;
+	do_div(usecd,(u64)USEC_BUCKET);
+	i = usecd;
 	if (i >= NUM_BUCKETS)
 		i = NUM_BUCKETS - 1;
 	xusb->usb_tx_delay[i]++;

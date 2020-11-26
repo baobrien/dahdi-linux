@@ -1754,11 +1754,14 @@ out:
 
 static void xbus_fill_proc_queue(struct seq_file *sfile, struct xframe_queue *q)
 {
+	u64 worst_lag_msec, worst_lag_usec;
+	worst_lag_msec = (u64) q->worst_lag_usec;
+	worst_lag_usec = do_div(worst_lag_msec, 1000);
 	seq_printf(sfile,
 		"%-15s: counts %3d, %3d, %3d worst %3d, overflows %3d worst_lag %02lld.%lld ms\n",
 		q->name, q->steady_state_count, q->count, q->max_count,
-		q->worst_count, q->overflows, q->worst_lag_usec / 1000,
-		q->worst_lag_usec % 1000);
+		q->worst_count, q->overflows, worst_lag_msec, 
+		worst_lag_usec);
 	xframe_queue_clearstats(q);
 }
 
@@ -1799,8 +1802,8 @@ static int xbus_proc_show(struct seq_file *sfile, void *data)
 	seq_printf(sfile, "usec_nosend: %d\n", xbus->usec_nosend);
 	seq_printf(sfile, "xbus: pcm_rx_counter = %d, frag = %d\n",
 		    atomic_read(&xbus->pcm_rx_counter), xbus->xbus_frag_count);
-	seq_printf(sfile, "max_rx_process = %2ld.%ld ms\n",
-		    xbus->max_rx_process / 1000, xbus->max_rx_process % 1000);
+	//seq_printf(sfile, "max_rx_process = %2ld.%ld ms\n",
+	//	    xbus->max_rx_process / 1000, xbus->max_rx_process % 1000);
 	xbus->max_rx_process = 0;
 	seq_printf(sfile, "\nTRANSPORT: max_send_size=%d refcount=%d\n",
 		    MAX_SEND_SIZE(xbus),
